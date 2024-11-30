@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"master.private/bstd.git/stackerr"
 )
+
+var version string
 
 func must(err error) {
 	if err == nil {
@@ -17,6 +20,7 @@ func must(err error) {
 }
 
 func main() {
+	fmt.Fprintln(os.Stderr, "golympus", version, "by theBitcoinheiro")
 	pf := NewPriceFetcher()
 	srv := newServer(pf)
 	listenAddr := "0.0.0.0:8085"
@@ -24,7 +28,7 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("request on /")
 	})
-	fmt.Println("golympus to listen on", listenAddr)
+	fmt.Fprintln(os.Stderr, "golympus to listen on", listenAddr)
 	http.ListenAndServe(listenAddr, nil)
 }
 
