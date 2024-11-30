@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"master.private/bstd.git/stackerr"
 )
 
 func must(err error) {
@@ -15,19 +17,29 @@ func must(err error) {
 }
 
 func main() {
-	srv := newServer()
+	pf := NewPriceFetcher()
+	srv := newServer(pf)
+	listenAddr := "0.0.0.0:8085"
 	http.HandleFunc("POST /rates/get", srv.ratesHandler)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("request on /")
 	})
-	//http.ListenAndServeTLS("0.0.0.0:8085", "data/certs/server.crt", "data/certs/server.key", nil)
-	http.ListenAndServe("0.0.0.0:8085", nil)
+	fmt.Println("golympus to listen on", listenAddr)
+	http.ListenAndServe(listenAddr, nil)
 }
 
-type server struct {}
+type PriceFetcher interface {
+	Fetch(symbols ...Symbol) (map[Symbol]float64, error)
+}
 
-func newServer() *server {
-	return &server {}
+type server struct {
+	pf PriceFetcher
+}
+
+func newServer(pf PriceFetcher) *server {
+	return &server {
+		pf: pf,
+	}
 }
  
 func (s *server) ratesHandlerOld(w http.ResponseWriter, _ *http.Request) {
@@ -44,6 +56,12 @@ func (s *server) ratesHandlerOld(w http.ResponseWriter, _ *http.Request) {
 func (s *server) ratesHandler(w http.ResponseWriter, _ *http.Request) {
 	log.Println("request on POST /rates/get")
 	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
+	prices, err := s.pf.Fetch(USD, EUR, JPY, CNY, BRL)
+	if err != nil {
+		log.Println(stackerr.Wrap(err))
+		w.WriteHeader(500)
+		return
+	}
 	res := []interface{}{
 		"ok",
 		[]map[string]float64{
@@ -51,17 +69,11 @@ func (s *server) ratesHandler(w http.ResponseWriter, _ *http.Request) {
 				"3": 0.0,
 				"6": 0.0,
 			},
-			{
-				"usd": 100000.05000,
-				"eur": 101000.10000,
-				"jpy": 14436600.000,
-				"cny": 50000.10000,
-				"brl": 580000.20000,
-			},
+			prices,
 		},
 	}
-	err := json.NewEncoder(w).Encode(res)
+	err = json.NewEncoder(w).Encode(res)
 	if err != nil {
-		log.Println(err)
+		log.Println(stackerr.Wrap(err))
 	}
 }
