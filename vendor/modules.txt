@@ -2,3 +2,4 @@
 ## explicit; go 1.22.0
 master.private/bstd.git/stackerr
 master.private/bstd.git/testutil
+master.private/bstd.git/util

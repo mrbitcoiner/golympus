@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"master.private/bstd.git/stackerr"
+	"master.private/bstd.git/util"
 )
 
 var version string
@@ -20,10 +21,11 @@ func must(err error) {
 }
 
 func main() {
+
 	fmt.Fprintln(os.Stderr, "golympus", version, "by theBitcoinheiro")
 	pf := NewPriceFetcher()
 	srv := newServer(pf)
-	listenAddr := "0.0.0.0:8085"
+	listenAddr := util.EnvOrDefault("LISTEN_ADDR", "0.0.0.0:8088")
 	http.HandleFunc("POST /rates/get", srv.ratesHandler)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("request on /")
