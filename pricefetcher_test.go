@@ -9,7 +9,7 @@ import (
 func TestIntegrationFetchSymbols(t *testing.T) {
 	pf := NewPriceFetcher()
 
-	res, err := pf.Fetch(USD, EUR, JPY, CNY, BRL)
+	res, err := pf.FetchPrice(USD, EUR, JPY, CNY, BRL)
 	testutil.Must(t, err)
 	if len(res) != 5 {
 		t.Fatal("unexpected len", len(res))
@@ -20,7 +20,7 @@ func TestIntegrationFetchSymbols(t *testing.T) {
 		}
 	}
 
-	res1, err := pf.Fetch(USD, EUR, JPY, CNY, BRL)
+	res1, err := pf.FetchPrice(USD, EUR, JPY, CNY, BRL)
 	testutil.Must(t, err)
 	if len(res1) != 5 {
 		t.Fatal("unexpected len", len(res))

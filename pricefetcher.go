@@ -45,7 +45,7 @@ type priceData struct {
 	fetchTime time.Time
 }
 
-func (p *priceFetcher) Fetch(symbols ...Symbol) (map[Symbol]float64, error) {
+func (p *priceFetcher) FetchPrice(symbols ...Symbol) (map[Symbol]float64, error) {
 	if len(symbols) == 0 {
 		return nil, nil
 	}
