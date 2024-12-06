@@ -53,17 +53,6 @@ func newServer(pf PriceFetcher, ff FeerateFetcher) *server {
 		ff: ff,
 	}
 }
- 
-func (s *server) ratesHandlerOld(w http.ResponseWriter, _ *http.Request) {
-	log.Println("request on POST /rates/get")
-	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
-	fmt.Fprintf(
-		w, `["ok",[{"12":0.0,"8":0.0,"4":0.0,"11":0.0,"9":0.0,"5":0.0,"10":0.0,`+
-		`"6":0.0,"2":0.0,"7":0.0,"3":0.0},`+
-		`{"usd":105000.05000,"eur":101000.10000,"jpy":14436600.000,`+
-		`"cny":50000.10000,"brl":580000.20000}]]`,
-	) 
-}
 
 func (s *server) ratesHandler(w http.ResponseWriter, _ *http.Request) {
 	log.Println("request on POST /rates/get")
