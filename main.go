@@ -24,19 +24,14 @@ func must(err error) {
 func main() {
 	fmt.Fprintln(os.Stderr, "golympus", version, "by theBitcoinheiro")
 	pf := NewPriceFetcher()
-	ff := NewFeerateFetcher(
-		util.MustEnv("BTC_URL"),
-		util.MustEnv("BTC_USER"),
-		util.MustEnv("BTC_PASSWORD"),
-	)
+	ff := NewFeerateFetcher(cfg.BtcUrl, cfg.BtcUser, cfg.BtcPassword)
 	srv := newServer(pf, ff)
-	listenAddr := util.EnvOrDefault("LISTEN_ADDR", "0.0.0.0:8088")
 	http.HandleFunc("POST /rates/get", srv.ratesHandler)
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("request on /")
 	})
-	fmt.Fprintln(os.Stderr, "golympus to listen on", listenAddr)
-	http.ListenAndServe(listenAddr, nil)
+	fmt.Fprintln(os.Stderr, "to listen on", cfg.ListenAddr)
+	http.ListenAndServe(cfg.ListenAddr, nil)
 }
 
 type PriceFetcher interface {
