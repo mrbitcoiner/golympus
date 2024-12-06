@@ -2,3 +2,4 @@ data
 go.sum
 **/.DS_Store
 out
+.env

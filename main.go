@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"master.private/bstd.git/stackerr"
-	"master.private/bstd.git/util"
 )
 
 var version string
