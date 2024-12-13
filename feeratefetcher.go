@@ -48,7 +48,7 @@ func (f *feerateFetcher) FetchFeerate(
 	for _, v := range nBlockTarget {
 		fromState, ok := f.feerates[v]
 		if ok && fromState.Time.After(expired) { 
-			result[v] = fromState.SatPerVbyte
+			result[v] = fromState.BtcPerKVByte
 			continue
 		}
 		toFetch = append(toFetch, v)
@@ -59,7 +59,7 @@ func (f *feerateFetcher) FetchFeerate(
 		return nil, stackerr.Wrap(err)
 	}
 	for _, v := range toFetch {
-		result[v] = f.feerates[v].SatPerVbyte
+		result[v] = f.feerates[v].BtcPerKVByte
 	}
 
 	return result, nil
@@ -83,7 +83,7 @@ func (f *feerateFetcher) fetchExtFeerates(nBlockTarget ...int32) error {
 		}
 
 		f.feerates[v] = feerateItem {
-			result.FeerateBtcKb * 100_000_000 / 1000, now,
+			result.FeerateBtcKb, now,
 		}
 	}
 	return nil
@@ -132,7 +132,7 @@ func (f *feerateFetcher) fromBtcRpc(
 }
 
 type feerateItem struct {
-	SatPerVbyte float64
+	BtcPerKVByte float64
 	Time time.Time
 }
 
