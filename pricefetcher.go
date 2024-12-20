@@ -23,25 +23,25 @@ const (
 )
 
 type priceFetcher struct {
-	state map[Symbol]priceData
-	stateMu sync.Mutex
-	maxLife time.Duration
-	c *http.Client
+	state      map[Symbol]priceData
+	stateMu    sync.Mutex
+	maxLife    time.Duration
+	c          *http.Client
 	fetchCount int64
 }
 
 func NewPriceFetcher() *priceFetcher {
 	return &priceFetcher{
-		state: map[Symbol]priceData{},
-		stateMu: sync.Mutex{},
-		maxLife: time.Minute * 5,
-		c: &http.Client{Timeout: time.Second * 60},
+		state:      map[Symbol]priceData{},
+		stateMu:    sync.Mutex{},
+		maxLife:    time.Minute * 5,
+		c:          &http.Client{Timeout: time.Second * 60},
 		fetchCount: 0,
 	}
 }
 
 type priceData struct {
-	price float64
+	price     float64
 	fetchTime time.Time
 }
 
@@ -56,14 +56,14 @@ func (p *priceFetcher) FetchPrice(symbols ...Symbol) (map[Symbol]float64, error)
 		if err != nil {
 			return nil, stackerr.Wrap(err)
 		}
-	} 
+	}
 	var missingSymbols []Symbol
 	result := map[Symbol]float64{}
 	now := time.Now()
 	expired := now.Add(p.maxLife * -1)
 
 	for _, v := range symbols {
-		fromState, ok :=  p.state[v]
+		fromState, ok := p.state[v]
 		if ok && fromState.fetchTime.After(expired) {
 			result[v] = fromState.price
 			continue
@@ -73,7 +73,7 @@ func (p *priceFetcher) FetchPrice(symbols ...Symbol) (map[Symbol]float64, error)
 	if len(missingSymbols) == 0 {
 		return result, nil
 	}
-	
+
 	// only when there are missing or expired symbols
 	err := p.extFetch(missingSymbols...)
 	if err != nil {
@@ -119,7 +119,7 @@ func (p *priceFetcher) extFetch(sym ...Symbol) error {
 	now := time.Now()
 	for k, v := range res.BitcoinVs {
 		p.state[k] = priceData{
-			price: v,
+			price:     v,
 			fetchTime: now,
 		}
 	}
@@ -131,6 +131,4 @@ func (p *priceFetcher) extFetch(sym ...Symbol) error {
 		log.Printf("failure fetching symbol: %s\n", "btc"+v)
 	}
 	return nil
-} 
-
-
+}

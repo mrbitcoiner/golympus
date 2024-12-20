@@ -13,24 +13,24 @@ import (
 )
 
 type feerateFetcher struct {
-	c *http.Client
-	btcUrl string
-	btcUser string
+	c           *http.Client
+	btcUrl      string
+	btcUser     string
 	btcPassword string
-	feerates map[int32]feerateItem
-	mu sync.Mutex
-	count int64
+	feerates    map[int32]feerateItem
+	mu          sync.Mutex
+	count       int64
 	maxCacheAge time.Duration
 }
 
 func NewFeerateFetcher(btcUrl, user, password string) *feerateFetcher {
 	return &feerateFetcher{
-		c: &http.Client{Timeout: time.Second * 60},
-		btcUrl: btcUrl,
-		btcUser: user,
+		c:           &http.Client{Timeout: time.Second * 60},
+		btcUrl:      btcUrl,
+		btcUser:     user,
 		btcPassword: password,
-		mu: sync.Mutex{},
-		feerates: map[int32]feerateItem{},
+		mu:          sync.Mutex{},
+		feerates:    map[int32]feerateItem{},
 		maxCacheAge: time.Minute * 5,
 	}
 
@@ -47,7 +47,7 @@ func (f *feerateFetcher) FetchFeerate(
 	expired := time.Now().Add(f.maxCacheAge * -1)
 	for _, v := range nBlockTarget {
 		fromState, ok := f.feerates[v]
-		if ok && fromState.Time.After(expired) { 
+		if ok && fromState.Time.After(expired) {
 			result[v] = fromState.BtcPerKVByte
 			continue
 		}
@@ -71,18 +71,18 @@ func (f *feerateFetcher) fetchExtFeerates(nBlockTarget ...int32) error {
 	for _, v := range nBlockTarget {
 		params := struct {
 			ConfTarget int32 `json:"conf_target"`
-		}{ v }
+		}{v}
 		result := struct {
-			FeerateBtcKb float64 `json:"feerate"`
-			Errors json.RawMessage `json:"errors"`
-			Blocks int32 `json:"blocks"`
+			FeerateBtcKb float64         `json:"feerate"`
+			Errors       json.RawMessage `json:"errors"`
+			Blocks       int32           `json:"blocks"`
 		}{}
-		err :=  f.fromBtcRpc("estimatesmartfee", params, &result)
-		if err != nil { 
+		err := f.fromBtcRpc("estimatesmartfee", params, &result)
+		if err != nil {
 			return stackerr.Wrap(err)
 		}
 
-		f.feerates[v] = feerateItem {
+		f.feerates[v] = feerateItem{
 			result.FeerateBtcKb, now,
 		}
 	}
@@ -95,11 +95,11 @@ func (f *feerateFetcher) fromBtcRpc(
 	defer func() { f.count++ }()
 
 	rpcReq := struct {
-		JsonRpc string `json:"jsonrpc"`
-		Id int64 `json:"id"`
-		Method string `json:"method"`
-		Params interface{} `json:"params"`
-	}{ "2.0", f.count, method, params }
+		JsonRpc string      `json:"jsonrpc"`
+		Id      int64       `json:"id"`
+		Method  string      `json:"method"`
+		Params  interface{} `json:"params"`
+	}{"2.0", f.count, method, params}
 
 	buf := &bytes.Buffer{}
 	err := json.NewEncoder(buf).Encode(rpcReq)
@@ -108,22 +108,28 @@ func (f *feerateFetcher) fromBtcRpc(
 	}
 
 	req, err := http.NewRequest("POST", f.btcUrl, buf)
-	if err != nil { return stackerr.Wrap(err) }
+	if err != nil {
+		return stackerr.Wrap(err)
+	}
 	req.SetBasicAuth(f.btcUser, f.btcPassword)
 
 	res, err := f.c.Do(req)
-	if err != nil { return stackerr.Wrap(err) }
+	if err != nil {
+		return stackerr.Wrap(err)
+	}
 	defer res.Body.Close()
 	buf.Reset()
-	
+
 	rpcRes := struct {
-		JsonRpc string `json:"jsonrpc"`
-		Id int64 `json:"id"`
-		Result interface{} `json:"result"`
-		Error *jsonRpcError `json:"error"`
-	}{ Result: result }
+		JsonRpc string        `json:"jsonrpc"`
+		Id      int64         `json:"id"`
+		Result  interface{}   `json:"result"`
+		Error   *jsonRpcError `json:"error"`
+	}{Result: result}
 	err = json.NewDecoder(res.Body).Decode(&rpcRes)
-	if err != nil { return stackerr.Wrap(err) }
+	if err != nil {
+		return stackerr.Wrap(err)
+	}
 	if rpcRes.Error != nil {
 		return stackerr.Wrap(rpcRes.Error)
 	}
@@ -133,14 +139,14 @@ func (f *feerateFetcher) fromBtcRpc(
 
 type feerateItem struct {
 	BtcPerKVByte float64
-	Time time.Time
+	Time         time.Time
 }
 
 type jsonRpcError struct {
-	Code int64 `json:"code"`
-	Message string `json:"message"`
-	Data json.RawMessage `json:"data"`
-} 
+	Code    int64           `json:"code"`
+	Message string          `json:"message"`
+	Data    json.RawMessage `json:"data"`
+}
 
 func (e *jsonRpcError) Error() string {
 	return fmt.Sprintf(
