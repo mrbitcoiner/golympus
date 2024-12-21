@@ -1,7 +1,7 @@
 # github.com/joho/godotenv v1.5.1
 ## explicit; go 1.12
 github.com/joho/godotenv
-# master.private/bstd.git v0.3.0
+# master.private/bstd.git v0.3.1-0.20241221180656-0d5c23bbed82
 ## explicit; go 1.22.0
 master.private/bstd.git/jsonrpc
 master.private/bstd.git/log

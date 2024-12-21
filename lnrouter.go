@@ -2,14 +2,13 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 	"strings"
 
 	"master.private/bstd.git/jsonrpc"
 	"master.private/bstd.git/stackerr"
-)	
+)
 
 type lnRouter struct {
 	client *jsonrpc.Client
@@ -28,11 +27,6 @@ func NewLnRouter(network, address string) *lnRouter {
 func (lr *lnRouter) FindRoutes(
 	fromPubkeys []string, toPubkey string, msat int64,
 ) ([]PaymentRoute, error) {
-	if fromPubkeys != nil && len(fromPubkeys) != 0 {
-		log.Printf(
-			"lnrouter: find routes from: %s to %s", fromPubkeys[0], toPubkey,
-		)
-	}
 
 	clnRoute, err := lr.getRoute(toPubkey, msat)
 	if err != nil {
@@ -47,7 +41,7 @@ func (lr *lnRouter) FindRoutes(
 		}
 		channelsData = append(channelsData, cd)
 	}
-	
+
 	paymentRoute := clnDataToPaymentRoute(clnRoute, channelsData)
 
 	return []PaymentRoute{paymentRoute}, nil
@@ -61,18 +55,17 @@ func (lr *lnRouter) Close() error {
 	return nil
 }
 
-
 func (lr *lnRouter) getRoute(toPubkey string, msat int64) (clnRoute, error) {
 	const (
 		riskFactor = 0
-		maxHops = 3
+		maxHops    = 3
 	)
 	var r clnRoute
 	params := struct {
-		ToPubkey string `json:"id"`
-		AmountMsat int64 `json:"msatoshi"`
-		RiskFactor int64 `json:"riskfactor"`
-		MaxHops int64 `json:"maxhops"`
+		ToPubkey   string `json:"id"`
+		AmountMsat int64  `json:"msatoshi"`
+		RiskFactor int64  `json:"riskfactor"`
+		MaxHops    int64  `json:"maxhops"`
 	}{
 		toPubkey, msat, riskFactor, maxHops,
 	}
@@ -92,7 +85,7 @@ func (lr *lnRouter) getChan(scid string, destNodeId string) (clnChan, error) {
 	}
 	params := struct {
 		ShortChannelId string `json:"short_channel_id"`
-	}{ scid }
+	}{scid}
 
 	err := lr.client.Call("listchannels", params, &result)
 	if err != nil {
@@ -121,11 +114,11 @@ func clnDataToPaymentRoute(clnRoute clnRoute, clnChans []clnChan) PaymentRoute {
 			panic(stackerr.Wrap(err))
 		}
 		hop := Hop{
-			NodeId: v.NodeId,
-			ShortChannelId: scidAsInt,
-			CltvExpireDelta: clnChans[i].Delay,
-			HtlcMinimumMsat: msatWithSuffixToInt(clnChans[i].HtlcMinMsat),
-			FeeBaseMsat: clnChans[i].BaseFeeMsat,
+			NodeId:                    v.NodeId,
+			ShortChannelId:            scidAsInt,
+			CltvExpireDelta:           clnChans[i].Delay,
+			HtlcMinimumMsat:           msatWithSuffixToInt(clnChans[i].HtlcMinMsat),
+			FeeBaseMsat:               clnChans[i].BaseFeeMsat,
 			FeeProportionalMillionths: clnChans[i].FeePerMillionth,
 		}
 		hops = append(hops, hop)
@@ -159,19 +152,19 @@ type clnRoute struct {
 }
 
 type clnHop struct {
-	NodeId string `json:"id"`
+	NodeId         string `json:"id"`
 	ShortChannelId string `json:"channel"`
-	AmountMsat int64 `json:"msatoshi"`
-	Cltv int32 `json:"delay"`
+	AmountMsat     int64  `json:"msatoshi"`
+	Cltv           int32  `json:"delay"`
 }
 
 type clnChan struct {
-	Source string `json:"source"`
-	Destination string `json:"destination"`
-	ShortChannelId string `json:"short_channel_id"`
-	BaseFeeMsat int64 `json:"base_fee_millisatoshi"`
-	FeePerMillionth int64 `json:"fee_per_millionth"`
-	Delay int32 `json:"delay"`
-	HtlcMinMsat string `json:"htlc_minimum_msat"`
-	HtlcMaxMsat string `json:"htlc_maximum_msat"`
+	Source          string `json:"source"`
+	Destination     string `json:"destination"`
+	ShortChannelId  string `json:"short_channel_id"`
+	BaseFeeMsat     int64  `json:"base_fee_millisatoshi"`
+	FeePerMillionth int64  `json:"fee_per_millionth"`
+	Delay           int32  `json:"delay"`
+	HtlcMinMsat     string `json:"htlc_minimum_msat"`
+	HtlcMaxMsat     string `json:"htlc_maximum_msat"`
 }

@@ -9,3 +9,6 @@ build:
 
 test:
 	go test . -v -count=1 -p=1
+
+fmt:
+	gofmt -w .

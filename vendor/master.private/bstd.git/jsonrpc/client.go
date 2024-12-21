@@ -39,7 +39,7 @@ func (c *Client) Call(
 		count int64
 		err   error
 		endl  = [1]byte{'\n'}
-		n int
+		n     int
 	)
 
 	c.mu.Lock()
@@ -75,14 +75,16 @@ func (c *Client) Call(
 		Result: result,
 	}
 
-	retry:
-	c.rxBuf = c.rxBuf[:0]
-	n, err = ReadTillDelimiter(&c.rxBuf, c.transport, '\n')
-	if err != nil {
-		return stackerr.Wrap(err)
-	}
-	if n == 0 {
-		goto retry
+	const nMaxAttempts = 2
+	for range nMaxAttempts {
+		c.rxBuf = c.rxBuf[:0]
+		n, err = ReadTillDelimiter(&c.rxBuf, c.transport, '\n')
+		if err != nil {
+			return stackerr.Wrap(err)
+		}
+		if n > 0 {
+			break
+		}
 	}
 
 	err = json.Unmarshal(c.rxBuf, &response)
