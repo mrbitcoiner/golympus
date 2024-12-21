@@ -75,7 +75,7 @@ func (s *server) routesplusHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("-> %+v", params)
 	w.Header().Set("Content-Type", "text/plain; charset=UTF-8")
 
-	routes, err := s.rf.FindRoutes(params.From, params.To, params.Sat*1000)
+	routes, err := s.rf.FindRoutes([]string{cfg.LnNodePubkey}, params.To, params.Sat*1000)
 	if err != nil {
 		log.Println(stackerr.Wrap(err))
 		return
