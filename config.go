@@ -12,6 +12,8 @@ type config struct {
 	BtcUrl      string
 	BtcUser     string
 	BtcPassword string
+	LnNetwork string
+	LnAddress string
 }
 
 func init() {
@@ -21,5 +23,7 @@ func init() {
 		BtcUrl:      util.MustEnv("BTC_URL"),
 		BtcUser:     util.MustEnv("BTC_USER"),
 		BtcPassword: util.MustEnv("BTC_PASSWORD"),
+		LnNetwork: util.MustEnv("LN_NETWORK"),
+		LnAddress: util.MustEnv("LN_ADDRESS"),
 	}
 }

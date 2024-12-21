@@ -40,7 +40,7 @@ func Test_shortChannelIdToInt(t *testing.T) {
 	}
 }
 
-func Test_shortChannelIdToBytes(t *testing.T) {
+func Test_shortChannelIdToString(t *testing.T) {
 	var payload int64 = 556369376388317185
 	expected := "506015x904x1"
 
