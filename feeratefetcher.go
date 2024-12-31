@@ -68,7 +68,7 @@ func (f *feerateFetcher) FetchFeerate(
 func (f *feerateFetcher) fetchExtFeerates(nBlockTarget ...int32) error {
 	now := time.Now()
 	for i, v := range nBlockTarget {
-		if i == 0 { 
+		if i == 0 {
 			log.Println("fetching data from bitcoind")
 		}
 		params := struct {
