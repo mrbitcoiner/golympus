@@ -44,10 +44,10 @@ func (f *feerateFetcher) FetchFeerate(
 
 	result := map[int32]float64{}
 	var toFetch []int32
-	expired := time.Now().Add(f.maxCacheAge * -1)
+	now := time.Now()
 	for _, v := range nBlockTarget {
 		fromState, ok := f.feerates[v]
-		if ok && fromState.Time.After(expired) {
+		if ok && now.Sub(fromState.Time) <= f.maxCacheAge {
 			result[v] = fromState.BtcPerKVByte
 			continue
 		}
@@ -66,9 +66,11 @@ func (f *feerateFetcher) FetchFeerate(
 }
 
 func (f *feerateFetcher) fetchExtFeerates(nBlockTarget ...int32) error {
-	log.Println("fetching data from bitcoind")
 	now := time.Now()
-	for _, v := range nBlockTarget {
+	for i, v := range nBlockTarget {
+		if i == 0 { 
+			log.Println("fetching data from bitcoind")
+		}
 		params := struct {
 			ConfTarget int32 `json:"conf_target"`
 		}{v}
