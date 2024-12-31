@@ -32,8 +32,7 @@ func Test_shortChannelIdToInt(t *testing.T) {
 	payload := "506015x904x1"
 	var expected int64 = 556369376388317185
 
-	r, err := shortChannelIdToInt(payload)
-	tu.Must(t, err)
+	r := mustShortChannelIdToInt(payload)
 
 	if r != expected {
 		t.Fatal("unexpected:", r)
