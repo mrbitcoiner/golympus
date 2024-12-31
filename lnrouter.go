@@ -33,13 +33,13 @@ func (lr *lnRouter) FindRoutes(
 		return nil, stackerr.Wrap(err)
 	}
 
-	channelsData := make([]clnChan, 0, len(clnRoute.Hops))
+	channelsData := make(map[int64][]clnChan, len(clnRoute.Hops))
 	for _, v := range clnRoute.Hops {
-		cd, err := lr.getChan(v.ShortChannelId, v.NodeId)
+		cd, err := lr.getChan(v.ShortChannelId)
 		if err != nil {
 			return nil, stackerr.Wrap(err)
 		}
-		channelsData = append(channelsData, cd)
+		channelsData[mustShortChannelIdToInt(cd[0].ShortChannelId)] = cd
 	}
 
 	paymentRoute := clnDataToPaymentRoute(clnRoute, channelsData)
@@ -58,7 +58,7 @@ func (lr *lnRouter) Close() error {
 func (lr *lnRouter) getRoute(toPubkey string, msat int64) (clnRoute, error) {
 	const (
 		riskFactor = 0
-		maxHops    = 3
+		maxHops    = 5
 	)
 	var r clnRoute
 	params := struct {
@@ -74,56 +74,71 @@ func (lr *lnRouter) getRoute(toPubkey string, msat int64) (clnRoute, error) {
 	if err != nil {
 		return r, stackerr.Wrap(err)
 	}
+	for i, hop := range r.Hops {
+		r.Hops[i].ShortChannelIdInt = mustShortChannelIdToInt(hop.ShortChannelId)
+	}
 
 	return r, nil
 }
 
-func (lr *lnRouter) getChan(scid string, destNodeId string) (clnChan, error) {
-	var r clnChan
-	var result struct {
+func (lr *lnRouter) getChan(scid string) ([]clnChan, error) {
+	var r struct {
 		Channels []clnChan `json:"channels"`
 	}
 	params := struct {
 		ShortChannelId string `json:"short_channel_id"`
 	}{scid}
 
-	err := lr.client.Call("listchannels", params, &result)
+	err := lr.client.Call("listchannels", params, &r)
 	if err != nil {
-		return r, stackerr.Wrap(err)
+		return r.Channels, stackerr.Wrap(err)
 	}
 
-	if l := len(result.Channels); l != 2 {
-		return r, fmt.Errorf("unexpected getchannels result length: %d", l)
+	if l := len(r.Channels); l != 2 {
+		return r.Channels, fmt.Errorf("unexpected getchannels result length: %d", l)
 	}
 
-	if result.Channels[0].Destination == destNodeId {
-		r = result.Channels[0]
-	} else {
-		r = result.Channels[1]
-	}
-
-	return r, nil
+	return r.Channels, nil
 }
 
-func clnDataToPaymentRoute(clnRoute clnRoute, clnChans []clnChan) PaymentRoute {
-	hops := make([]Hop, 0, len(clnRoute.Hops))
-	for i, v := range clnRoute.Hops {
-		scidAsInt, err := shortChannelIdToInt(v.ShortChannelId)
-		if err != nil {
-			// must never fail, on failure, we want a crash
-			panic(stackerr.Wrap(err))
+func clnDataToPaymentRoute(
+	clnRoute clnRoute, clnChans map[int64][]clnChan,
+) PaymentRoute {
+
+	hops := []Hop{}
+	for i, clnHop := range clnRoute.Hops {
+		var hop Hop
+
+		// in the first hop we don't know previous node id (id of this node)
+		// let's discover it
+		if i == 0 &&
+			clnChans[clnHop.ShortChannelIdInt][0].Destination == clnHop.NodeId {
+			hop.NodeId = clnChans[clnHop.ShortChannelIdInt][0].Source
+		} else if i == 0 {
+			hop.NodeId = clnChans[clnHop.ShortChannelIdInt][0].Destination
+		} else {
+			// we are sure there's a previous hop
+			hop.NodeId = clnRoute.Hops[i-1].NodeId
 		}
-		hop := Hop{
-			NodeId:                    v.NodeId,
-			ShortChannelId:            scidAsInt,
-			CltvExpireDelta:           clnChans[i].Delay,
-			HtlcMinimumMsat:           msatWithSuffixToInt(clnChans[i].HtlcMinMsat),
-			FeeBaseMsat:               clnChans[i].BaseFeeMsat,
-			FeeProportionalMillionths: clnChans[i].FeePerMillionth,
+
+		hop.ShortChannelId = clnHop.ShortChannelIdInt
+
+		var sourceChan clnChan
+		if clnChans[clnHop.ShortChannelIdInt][0].Source == hop.NodeId {
+			sourceChan = clnChans[clnHop.ShortChannelIdInt][0]
+		} else {
+			sourceChan = clnChans[clnHop.ShortChannelIdInt][1]
 		}
+
+		hop.CltvExpiryDelta = int16(sourceChan.Delay)
+		hop.HtlcMinimumMsat = msatWithSuffixToInt(sourceChan.HtlcMinMsat)
+		hop.FeeBaseMsat = int32(sourceChan.BaseFeeMsat)
+		hop.FeeProportionalMillionths = int32(sourceChan.FeePerMillionth)
+
 		hops = append(hops, hop)
 	}
-	return PaymentRoute(hops)
+
+	return hops
 }
 
 func msatWithSuffixToInt(in string) int64 {
@@ -141,10 +156,10 @@ type PaymentRoute []Hop
 type Hop struct {
 	NodeId                    string `json:"nodeId"`
 	ShortChannelId            int64  `json:"shortChannelId"`
-	CltvExpireDelta           int32  `json:"cltvExpireDelta"`
+	CltvExpiryDelta           int16  `json:"cltvExpireDelta"`
 	HtlcMinimumMsat           int64  `json:"htlcMinimumMsat"`
-	FeeBaseMsat               int64  `json:"feeBaseMsat"`
-	FeeProportionalMillionths int64  `json:"feeProportionalMillionths"`
+	FeeBaseMsat               int32  `json:"feeBaseMsat"`
+	FeeProportionalMillionths int32  `json:"feeProportionalMillionths"`
 }
 
 type clnRoute struct {
@@ -152,10 +167,11 @@ type clnRoute struct {
 }
 
 type clnHop struct {
-	NodeId         string `json:"id"`
-	ShortChannelId string `json:"channel"`
-	AmountMsat     int64  `json:"msatoshi"`
-	Cltv           int32  `json:"delay"`
+	NodeId            string `json:"id"`
+	ShortChannelId    string `json:"channel"`
+	ShortChannelIdInt int64
+	AmountMsat        int64 `json:"msatoshi"`
+	Delay             int32 `json:"delay"`
 }
 
 type clnChan struct {
