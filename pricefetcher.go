@@ -23,20 +23,20 @@ const (
 )
 
 type priceFetcher struct {
-	state      map[Symbol]priceData
-	stateMu    sync.Mutex
-	maxLife    time.Duration
-	c          *http.Client
-	fetchCount int64
+	state       map[Symbol]priceData
+	stateMu     sync.Mutex
+	maxCacheAge time.Duration
+	c           *http.Client
+	fetchCount  int64
 }
 
 func NewPriceFetcher() *priceFetcher {
 	return &priceFetcher{
-		state:      map[Symbol]priceData{},
-		stateMu:    sync.Mutex{},
-		maxLife:    time.Minute * 5,
-		c:          &http.Client{Timeout: time.Second * 60},
-		fetchCount: 0,
+		state:       map[Symbol]priceData{},
+		stateMu:     sync.Mutex{},
+		maxCacheAge: time.Minute * 5,
+		c:           &http.Client{Timeout: time.Second * 60},
+		fetchCount:  0,
 	}
 }
 
@@ -60,11 +60,10 @@ func (p *priceFetcher) FetchPrice(symbols ...Symbol) (map[Symbol]float64, error)
 	var missingSymbols []Symbol
 	result := map[Symbol]float64{}
 	now := time.Now()
-	expired := now.Add(p.maxLife * -1)
 
 	for _, v := range symbols {
 		fromState, ok := p.state[v]
-		if ok && fromState.fetchTime.After(expired) {
+		if ok && now.Sub(fromState.fetchTime) <= p.maxCacheAge {
 			result[v] = fromState.price
 			continue
 		}
