@@ -14,7 +14,6 @@ type config struct {
 	BtcPassword string
 	LnNetwork   string
 	LnAddress   string
-	LnNodePubkey string
 }
 
 func init() {
@@ -26,6 +25,5 @@ func init() {
 		BtcPassword: util.MustEnv("BTC_PASSWORD"),
 		LnNetwork:   util.MustEnv("LN_NETWORK"),
 		LnAddress:   util.MustEnv("LN_ADDRESS"),
-		LnNodePubkey:   util.MustEnv("LN_NODE_PUBKEY"),
 	}
 }
