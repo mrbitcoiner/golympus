@@ -74,7 +74,8 @@ func (s *server) routesplusHandler(
 
 	routes, err := s.rf.FindRoutes(params.From, params.To, params.Sat*1000)
 	if err != nil {
-		return stackerr.Wrap(err)
+		log.Println("error getting routes, returning empty routes: ", err)
+		routes = []PaymentRoute{}
 	}
 
 	result := []interface{}{
